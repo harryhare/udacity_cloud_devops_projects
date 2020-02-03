@@ -1,0 +1,1 @@
+aws cloudformation update-stack --stack-name udacity-cloudformation-project-mayue --template-body file://cloudformation/main.yml --parameters file://cloudformation/parameter.json

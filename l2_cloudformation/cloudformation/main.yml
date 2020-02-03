@@ -1,0 +1,131 @@
+Description: >
+  udacity cloud ops project
+  by mayue
+  
+Parameters:
+  ProjectName:
+    Description: project name
+    Type: String
+    Default: udacity cloud ops project 02
+  VPCCidr:
+    Description: ip range for scaling group
+    Type: String
+    Default: 10.1.0.0/16
+  Subnet1Cidr:
+    Description: ip range for subnet 1
+    Type: String
+    Default: 10.1.1.0/24
+  Subnet2Cidr:
+    Description: ip range for subnet 2
+    Type: String
+    Default: 10.1.2.0/24
+  Zones:
+    Description: zones
+    Type: "List<String>"
+    Default: "us-west-2a, us-west-2b"
+  Maxsize:
+    Description: max size of vms in auto scaling group
+    Type: String
+    Default: 1
+  MinSize:
+    Description: min size of vms in auto scaling group
+    Type: String
+    Default: 1
+    
+Resources:
+  ## vpc
+  VPCTest001:
+    Type: AWS::EC2::VPC
+    Properties: 
+      CidrBlock: !Ref VPCCidr
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      InstanceTenancy: default
+  PrivateNetwork001:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: VPCTest001
+      CidrBlock: !Ref Subnet1Cidr
+      AvailabilityZone: "us-west-2a"
+  PrivateNetwork002:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: VPCTest001
+      CidrBlock: !Ref Subnet2Cidr
+      AvailabilityZone: "us-west-2b"
+  
+  ## security group
+  ## auto scaling group
+  
+  WebLaunchConfiguration:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties: 
+      AssociatePublicIpAddress: true
+      #BlockDeviceMappings: 
+      #  - BlockDeviceMapping
+      #ClassicLinkVPCId: String
+      #ClassicLinkVPCSecurityGroups: 
+      #  - String
+      #EbsOptimized: true # not support
+      #IamInstanceProfile: String
+      ImageId: "ami-0d1cd67c26f5fca19"
+      #InstanceId: String
+      #InstanceMonitoring: false
+      InstanceType: "t2.micro"
+      KeyName: "udacity_project_cloudformation"
+      LaunchConfigurationName: "launch001"
+      PlacementTenancy: "default"
+      #RamDiskId: String
+      #SecurityGroups: 
+      #  - String
+      #SpotPrice: String
+      #UserData: String
+  Web:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties: 
+      AutoScalingGroupName: web-app
+      LaunchConfigurationName: launch001
+      MaxSize: !Ref Maxsize
+      MinSize: !Ref MinSize
+      AvailabilityZones: !Ref Zones
+    DependsOn: WebLaunchConfiguration
+  ## load balancer
+  
+  ## s3 role
+
+
+  #instace profile contains the IAM Role name(s) that we want to associate to our auto scaling EC2 Servers
+#  ProfileWithRolesForOurApp:
+#    Type: AWS::IAM::InstanceProfile
+#    Properties: 
+#      Roles:
+#        - UdacityS3ReadOnlyEC2
+  
+#          #!/bin/bash
+#          apt-get update -y
+#          apt-get install unzip awscli -y
+#          apt-get install apache2 -y
+#          systemctl start apache2.service
+#          cd /var/www/html
+#          aws s3 cp s3://udacity-demo-1/udacity.zip .
+#          unzip -o udacity.zip
+Outputs: 
+  Region:
+    Description: "region"
+    Value:
+      Ref: "AWS::Region"
+    Export:
+      Name: region
+  AvailabilityZones:
+    Description: AvailabilityZones
+    Value:
+      !Join 
+        - ","
+        - Fn::GetAZs: 
+            Ref: "AWS::Region"
+    Export:
+      Name: AvailabilityZones
+  
+  
