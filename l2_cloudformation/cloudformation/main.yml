@@ -47,8 +47,13 @@ Parameters:
       cd /var/www/html
       aws s3 cp s3://udacity-demo-1/udacity.zip .
       unzip -o udacity.zip
+      
 Resources:
-  ## vpc
+
+#########################################
+#  vpc
+#########################################
+
   VPCTest001:
     Type: AWS::EC2::VPC
     Properties: 
@@ -109,81 +114,11 @@ Resources:
     Properties:
       SubnetId: !Ref PrivateNetwork002
       RouteTableId: !Ref PublicRouteTable
-  ## security group
-  ## auto scaling group
-  
-  WebLaunchConfiguration:
-    Type: AWS::AutoScaling::LaunchConfiguration
-    Properties: 
-      AssociatePublicIpAddress: true
-      BlockDeviceMappings: 
-        - DeviceName: /dev/sda1
-          Ebs: 
-            VolumeSize: 10
-            #VolumeType: "io1"
-            #Iops: 200
-            DeleteOnTermination: true
-      #ClassicLinkVPCId: String
-      #ClassicLinkVPCSecurityGroups: 
-      #  - String
-      #EbsOptimized: true # not support
-      #IamInstanceProfile: String
-      ImageId: !Ref ImageId
-      #InstanceId: String
-      #InstanceMonitoring: false
-      InstanceType: !Ref InstanceType
-      KeyName: "udacity_project_cloudformation"
-      LaunchConfigurationName: "WebLaunch"
-      PlacementTenancy: "default"
-      #RamDiskId: String
-      SecurityGroups: 
-        - !Ref WebSG
-      #SpotPrice: String
-      UserData:
-        Fn::Base64:
-          !Sub |
-              #!/bin/bash
-              apt-get update -y
-              apt-get install unzip awscli -y
-              apt-get install apache2 -y
-              systemctl start apache2.service
-              cd /var/www/html
-              aws s3 cp s3://udacity-demo-1/udacity.zip .
-              unzip -o udacity.zip
-  Web:
-    Type: AWS::AutoScaling::AutoScalingGroup
-    Properties: 
-      LaunchConfigurationName: WebLaunch
-      MaxSize: !Ref Maxsize
-      MinSize: !Ref MinSize
-      VPCZoneIdentifier: 
-        - !Ref PrivateNetwork001
-        - !Ref PrivateNetwork002
-      #AvailabilityZones: 
-      #  - "us-west-2a"
-      #  - "us-west-2b"
-    DependsOn: WebLaunchConfiguration
-  
+      
+#########################################
+#  security group
+#########################################
 
-#  Route:
-#    Type: AWS::EC2::Route
-#    Properties:
-#      RouteTableId:
-#        Ref: RouteTable
-#      DestinationCidrBlock: 0.0.0.0/0
-#      NatGatewayId:
-#         Ref: NatGateway
-  ## load balancer
-  
-  ## s3 role
-
-
-  #instace profile contains the IAM Role name(s) that we want to associate to our auto scaling EC2 Servers
-#  ProfileWithRolesForOurApp:
-#    Type: AWS::IAM::InstanceProfile
-#    Properties: 
-#      Roles:
-#        - UdacityS3ReadOnlyEC2
   WebSG:
     Type: AWS::EC2::SecurityGroup
     Properties: 
@@ -217,13 +152,137 @@ Resources:
           CidrIp: 0.0.0.0/0
       VpcId:
         Ref: VPCTest001
+        
+#########################################
+# instances
+#########################################
+
+  WebLaunchConfiguration:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties: 
+      AssociatePublicIpAddress: true
+      BlockDeviceMappings: 
+        - DeviceName: /dev/sda1
+          Ebs: 
+            VolumeSize: 10
+            #VolumeType: "io1"
+            #Iops: 200
+            DeleteOnTermination: true
+      #ClassicLinkVPCId: String
+      #ClassicLinkVPCSecurityGroups: 
+      #  - String
+      #EbsOptimized: true # not support
+      IamInstanceProfile: 
+        !Ref ProfileWithRolesForOurApp
+      ImageId: !Ref ImageId
+      #InstanceId: String
+      #InstanceMonitoring: false
+      InstanceType: !Ref InstanceType
+      KeyName: "udacity_project_cloudformation"
+      PlacementTenancy: "default"
+      #RamDiskId: String
+      SecurityGroups: 
+        - !Ref WebSG
+      #SpotPrice: String
+      UserData:
+        Fn::Base64:
+          !Sub |
+              #!/bin/bash
+              apt-get update -y
+              apt-get install unzip awscli -y
+              apt-get install apache2 -y
+              systemctl start apache2.service
+              cd /var/www/html
+              aws s3 cp s3://udacity-demo-1/udacity.zip .
+              unzip -o udacity.zip
+  Web:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties: 
+      LaunchConfigurationName:
+        !Ref WebLaunchConfiguration
+      MaxSize: !Ref Maxsize
+      MinSize: !Ref MinSize
+      VPCZoneIdentifier: 
+        - !Ref PrivateNetwork001
+        - !Ref PrivateNetwork002
+      TargetGroupARNs:
+        - !Ref WebAppTargetGroup
+    DependsOn: WebLaunchConfiguration
+  
+  ProfileWithRolesForOurApp:
+    Type: AWS::IAM::InstanceProfile
+    Properties: 
+      Roles:
+        - UdacityS3ReadOnlyEC2
+
+#########################################
+# load balancer
+#########################################
+
+  ELBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VPCTest001
+      GroupDescription: Enable HTTP/HTTPS access
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+
+  WebAppALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      IpAddressType: ipv4
+      Scheme: internet-facing
+      SecurityGroups:
+        - !Ref ELBSecurityGroup
+      Subnets:
+        - !Ref PrivateNetwork001
+        - !Ref PrivateNetwork002
+      Type: application
+  
+  Listener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: 
+            !Ref WebAppTargetGroup
+      LoadBalancerArn:
+        Ref: WebAppALB
+      Port: 80
+      Protocol: HTTP
+
+  WebAppTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Port: 80
+      Protocol: HTTP
+      VpcId: !Ref VPCTest001
+      HealthCheckIntervalSeconds: 60
+      HealthCheckPath: /
+      HealthCheckPort: 80
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      
+      
+ 
+ 
+#########################################
+# outputs
+#########################################
+ 
 Outputs: 
+
   Region:
     Description: "region"
     Value:
       Ref: "AWS::Region"
     Export:
       Name: region
+      
   AvailabilityZones:
     Description: AvailabilityZones
     Value:
@@ -233,5 +292,19 @@ Outputs:
             Ref: "AWS::Region"
     Export:
       Name: AvailabilityZones
-  
+      
+  AutoScalingGroupId:
+    Description: AvailabilityZones
+    Value:
+      !Ref Web
+    Export:
+      Name: Web
+      
+  LBDNSName:
+    Description: Web App ELB DNSName 
+    Value:
+      Fn::Join:
+        - ""
+        - - "http://"
+          - Fn::GetAtt: WebAppALB.DNSName  
   

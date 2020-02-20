@@ -1,1 +1,1 @@
-aws cloudformation update-stack --stack-name udacity-cloudformation-project-mayue1 --template-body file://cloudformation/main.yml --parameters file://cloudformation/parameter.json
+aws cloudformation update-stack --stack-name udacity-cloudformation-project-mayue  --capabilities CAPABILITY_IAM --template-body file://cloudformation/main.yml --parameters file://cloudformation/parameter.json
