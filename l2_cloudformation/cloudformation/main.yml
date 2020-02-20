@@ -142,10 +142,10 @@ Resources:
           FromPort: 80
           ToPort: 80
           CidrIp: 0.0.0.0/0
-        #- IpProtocol: tcp
-        #  FromPort: 22
-        #  ToPort: 22
-        #  CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
       VpcId:
         Ref: VPC001
         
@@ -156,7 +156,7 @@ Resources:
   WebLaunchConfiguration:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties: 
-      AssociatePublicIpAddress: true
+      #AssociatePublicIpAddress: true
       BlockDeviceMappings: 
         - DeviceName: /dev/sda1
           Ebs: 
@@ -166,15 +166,22 @@ Resources:
         !Ref ProfileWithRolesForOurApp
       ImageId: !Ref ImageId
       InstanceType: !Ref InstanceType
-      #KeyName: "udacity_project_cloudformation"
+      KeyName: "udacity_project_cloudformation"
       PlacementTenancy: "default"
       SecurityGroups: 
         - !Ref WebSG
       UserData:
         Fn::Base64:
           !Sub |
-              !Ref UserData
-  Web:
+            #!/bin/bash
+            apt-get update -y
+            apt-get install unzip awscli -y
+            apt-get install apache2 -y
+            systemctl start apache2.service
+            cd /var/www/html
+            aws s3 cp s3://udacity-demo-1/udacity.zip .
+            unzip -o udacity.zip
+  Web1:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties: 
       LaunchConfigurationName:
@@ -270,12 +277,6 @@ Outputs:
     Export:
       Name: AvailabilityZones
       
-  AutoScalingGroupId:
-    Description: AvailabilityZones
-    Value:
-      !Ref Web
-    Export:
-      Name: Web
       
   LBDNSName:
     Description: Web App ELB DNSName 
