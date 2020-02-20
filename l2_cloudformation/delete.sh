@@ -1,1 +1,1 @@
-aws cloudformation delete-stack --stack-name udacity-cloudformation-project-mayue
+aws cloudformation delete-stack --stack-name udacity-cloudformation-project-mayue1

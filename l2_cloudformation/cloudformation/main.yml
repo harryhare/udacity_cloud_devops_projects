@@ -74,7 +74,41 @@ Resources:
         !Select [1, !Ref SubnetIpBlocks]
       AvailabilityZone:
         !Select [1, !Ref Zones]
-  
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+      - Key: Name
+        Value: test
+  VPCGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPCTest001
+      InternetGatewayId: !Ref InternetGateway
+      
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPCTest001
+
+  PublicInternetRouteTableEntry:
+    Type: AWS::EC2::Route
+    Properties:
+      GatewayId: !Ref InternetGateway
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: '0.0.0.0/0'
+
+  RouteTableAssociationAPublic:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PrivateNetwork001
+      RouteTableId: !Ref PublicRouteTable
+
+  RouteTableAssociationBPublic:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PrivateNetwork002
+      RouteTableId: !Ref PublicRouteTable
   ## security group
   ## auto scaling group
   
@@ -129,32 +163,8 @@ Resources:
       #  - "us-west-2a"
       #  - "us-west-2b"
     DependsOn: WebLaunchConfiguration
-  NatGateway01:
-    Type: AWS::EC2::NatGateway
-    Properties:
-      AllocationId:
-        Fn::GetAtt:
-          - EIP01
-          - AllocationId
-      SubnetId:
-        Ref: PrivateNetwork001
-  EIP01:
-    Type: AWS::EC2::EIP
-    Properties:
-      Domain: vpc
-  NatGateway02:
-    Type: AWS::EC2::NatGateway
-    Properties:
-      AllocationId:
-        Fn::GetAtt:
-          - EIP02
-          - AllocationId
-      SubnetId:
-        Ref: PrivateNetwork002
-  EIP02:
-    Type: AWS::EC2::EIP
-    Properties:
-      Domain: vpc
+  
+
 #  Route:
 #    Type: AWS::EC2::Route
 #    Properties:
@@ -180,10 +190,6 @@ Resources:
       GroupDescription: open 80 & 22
       GroupName: WebSG
       SecurityGroupEgress: 
-        - IpProtocol: icmp
-          FromPort: -1
-          ToPort: -1
-          CidrIp: 0.0.0.0/0
         - IpProtocol: tcp
           FromPort: 80
           ToPort: 80
@@ -196,7 +202,11 @@ Resources:
           FromPort: 53
           ToPort: 53
           CidrIp: 0.0.0.0/0
-      SecurityGroupIngress: 
+      SecurityGroupIngress:
+        - IpProtocol: icmp
+          FromPort: -1
+          ToPort: -1
+          CidrIp: 0.0.0.0/0
         - IpProtocol: tcp
           FromPort: 80
           ToPort: 80
