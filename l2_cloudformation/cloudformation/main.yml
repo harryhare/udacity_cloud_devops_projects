@@ -22,7 +22,7 @@ Parameters:
   Maxsize:
     Description: max size of vms in auto scaling group
     Type: String
-    Default: 1 # 4
+    Default: 1 #4
   MinSize:
     Description: min size of vms in auto scaling group
     Type: String
@@ -104,13 +104,13 @@ Resources:
       DestinationCidrBlock: '0.0.0.0/0'
 
   RouteTableAssociationAPublic:
-    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId: !Ref PrivateNetwork001
       RouteTableId: !Ref PublicRouteTable
 
   RouteTableAssociationBPublic:
-    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId: !Ref PrivateNetwork002
       RouteTableId: !Ref PublicRouteTable
@@ -165,36 +165,19 @@ Resources:
         - DeviceName: /dev/sda1
           Ebs: 
             VolumeSize: 10
-            #VolumeType: "io1"
-            #Iops: 200
             DeleteOnTermination: true
-      #ClassicLinkVPCId: String
-      #ClassicLinkVPCSecurityGroups: 
-      #  - String
-      #EbsOptimized: true # not support
       IamInstanceProfile: 
         !Ref ProfileWithRolesForOurApp
       ImageId: !Ref ImageId
-      #InstanceId: String
-      #InstanceMonitoring: false
       InstanceType: !Ref InstanceType
-      KeyName: "udacity_project_cloudformation"
+      #KeyName: "udacity_project_cloudformation"
       PlacementTenancy: "default"
-      #RamDiskId: String
       SecurityGroups: 
         - !Ref WebSG
-      #SpotPrice: String
       UserData:
         Fn::Base64:
           !Sub |
-              #!/bin/bash
-              apt-get update -y
-              apt-get install unzip awscli -y
-              apt-get install apache2 -y
-              systemctl start apache2.service
-              cd /var/www/html
-              aws s3 cp s3://udacity-demo-1/udacity.zip .
-              unzip -o udacity.zip
+              !Ref UserData
   Web:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties: 
