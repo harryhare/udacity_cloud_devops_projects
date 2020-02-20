@@ -22,11 +22,11 @@ Parameters:
   Maxsize:
     Description: max size of vms in auto scaling group
     Type: String
-    Default: 1 #4
+    Default: 4
   MinSize:
     Description: min size of vms in auto scaling group
     Type: String
-    Default: 1 # 4
+    Default: 4
   ImageId:
     Description: image
     Type: String
@@ -34,7 +34,7 @@ Parameters:
   InstanceType:
     Description: image
     Type: String
-    Default: "t2.micro" # "t2.medium"
+    Default: "t2.medium"
   UserData: 
     Description: script to run the website
     Type: String
@@ -54,7 +54,7 @@ Resources:
 #  vpc
 #########################################
 
-  VPCTest001:
+  VPC001:
     Type: AWS::EC2::VPC
     Properties: 
       CidrBlock: !Ref VPCCidr
@@ -65,7 +65,7 @@ Resources:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId:
-        Ref: VPCTest001
+        Ref: VPC001
       CidrBlock:
         !Select [0, !Ref SubnetIpBlocks]
       AvailabilityZone:
@@ -74,7 +74,7 @@ Resources:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId:
-        Ref: VPCTest001
+        Ref: VPC001
       CidrBlock: 
         !Select [1, !Ref SubnetIpBlocks]
       AvailabilityZone:
@@ -88,13 +88,13 @@ Resources:
   VPCGatewayAttachment:
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
-      VpcId: !Ref VPCTest001
+      VpcId: !Ref VPC001
       InternetGatewayId: !Ref InternetGateway
       
   PublicRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
-      VpcId: !Ref VPCTest001
+      VpcId: !Ref VPC001
 
   PublicInternetRouteTableEntry:
     Type: AWS::EC2::Route
@@ -138,20 +138,16 @@ Resources:
           ToPort: 53
           CidrIp: 0.0.0.0/0
       SecurityGroupIngress:
-        - IpProtocol: icmp
-          FromPort: -1
-          ToPort: -1
-          CidrIp: 0.0.0.0/0
         - IpProtocol: tcp
           FromPort: 80
           ToPort: 80
           CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 22
-          ToPort: 22
-          CidrIp: 0.0.0.0/0
+        #- IpProtocol: tcp
+        #  FromPort: 22
+        #  ToPort: 22
+        #  CidrIp: 0.0.0.0/0
       VpcId:
-        Ref: VPCTest001
+        Ref: VPC001
         
 #########################################
 # instances
@@ -205,7 +201,7 @@ Resources:
   ELBSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      VpcId: !Ref VPCTest001
+      VpcId: !Ref VPC001
       GroupDescription: Enable HTTP/HTTPS access
       SecurityGroupIngress:
         - IpProtocol: tcp
@@ -242,7 +238,7 @@ Resources:
     Properties:
       Port: 80
       Protocol: HTTP
-      VpcId: !Ref VPCTest001
+      VpcId: !Ref VPC001
       HealthCheckIntervalSeconds: 60
       HealthCheckPath: /
       HealthCheckPort: 80
@@ -251,8 +247,6 @@ Resources:
       HealthyThresholdCount: 2
       
       
- 
- 
 #########################################
 # outputs
 #########################################
