@@ -6,6 +6,7 @@
 [ ] do the task
 	- [ ] security group
 	- [ ] add userdata to launch config
+	- [ ] disk
 	- [ ] load balancer
 	- [ ] login/test
 [ ] the output

@@ -10,28 +10,43 @@ Parameters:
   VPCCidr:
     Description: ip range for scaling group
     Type: String
-    Default: 10.1.0.0/16
-  Subnet1Cidr:
-    Description: ip range for subnet 1
-    Type: String
-    Default: 10.1.1.0/24
-  Subnet2Cidr:
-    Description: ip range for subnet 2
-    Type: String
-    Default: 10.1.2.0/24
+    Default: 10.0.0.0/16
+  SubnetIpBlocks:
+    Description: ip range for subnets
+    Type: List<String>
+    Default: "10.0.0.0/24, 10.0.1.0/24"
   Zones:
     Description: zones
-    Type: "List<String>"
+    Type: List<String>
     Default: "us-west-2a, us-west-2b"
   Maxsize:
     Description: max size of vms in auto scaling group
     Type: String
-    Default: 1
+    Default: 1 # 4
   MinSize:
     Description: min size of vms in auto scaling group
     Type: String
-    Default: 1
-    
+    Default: 1 # 4
+  ImageId:
+    Description: image
+    Type: String
+    Default: "ami-0d1cd67c26f5fca19"
+  InstanceType:
+    Description: image
+    Type: String
+    Default: "t2.micro" # "t2.medium"
+  UserData: 
+    Description: script to run the website
+    Type: String
+    Default: 
+      #!/bin/bash
+      apt-get update -y
+      apt-get install unzip awscli -y
+      apt-get install apache2 -y
+      systemctl start apache2.service
+      cd /var/www/html
+      aws s3 cp s3://udacity-demo-1/udacity.zip .
+      unzip -o udacity.zip
 Resources:
   ## vpc
   VPCTest001:
@@ -46,15 +61,19 @@ Resources:
     Properties:
       VpcId:
         Ref: VPCTest001
-      CidrBlock: !Ref Subnet1Cidr
-      AvailabilityZone: "us-west-2a"
+      CidrBlock:
+        !Select [0, !Ref SubnetIpBlocks]
+      AvailabilityZone:
+        !Select [0, !Ref Zones]
   PrivateNetwork002:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId:
         Ref: VPCTest001
-      CidrBlock: !Ref Subnet2Cidr
-      AvailabilityZone: "us-west-2b"
+      CidrBlock: 
+        !Select [1, !Ref SubnetIpBlocks]
+      AvailabilityZone:
+        !Select [1, !Ref Zones]
   
   ## security group
   ## auto scaling group
@@ -63,34 +82,87 @@ Resources:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties: 
       AssociatePublicIpAddress: true
-      #BlockDeviceMappings: 
-      #  - BlockDeviceMapping
+      BlockDeviceMappings: 
+        - DeviceName: /dev/sda1
+          Ebs: 
+            VolumeSize: 10
+            #VolumeType: "io1"
+            #Iops: 200
+            DeleteOnTermination: true
       #ClassicLinkVPCId: String
       #ClassicLinkVPCSecurityGroups: 
       #  - String
       #EbsOptimized: true # not support
       #IamInstanceProfile: String
-      ImageId: "ami-0d1cd67c26f5fca19"
+      ImageId: !Ref ImageId
       #InstanceId: String
       #InstanceMonitoring: false
-      InstanceType: "t2.micro"
+      InstanceType: !Ref InstanceType
       KeyName: "udacity_project_cloudformation"
-      LaunchConfigurationName: "launch001"
+      LaunchConfigurationName: "WebLaunch"
       PlacementTenancy: "default"
       #RamDiskId: String
-      #SecurityGroups: 
-      #  - String
+      SecurityGroups: 
+        - !Ref WebSG
       #SpotPrice: String
-      #UserData: String
+      UserData:
+        Fn::Base64:
+          !Sub |
+              #!/bin/bash
+              apt-get update -y
+              apt-get install unzip awscli -y
+              apt-get install apache2 -y
+              systemctl start apache2.service
+              cd /var/www/html
+              aws s3 cp s3://udacity-demo-1/udacity.zip .
+              unzip -o udacity.zip
   Web:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties: 
-      AutoScalingGroupName: web-app
-      LaunchConfigurationName: launch001
+      LaunchConfigurationName: WebLaunch
       MaxSize: !Ref Maxsize
       MinSize: !Ref MinSize
-      AvailabilityZones: !Ref Zones
+      VPCZoneIdentifier: 
+        - !Ref PrivateNetwork001
+        - !Ref PrivateNetwork002
+      #AvailabilityZones: 
+      #  - "us-west-2a"
+      #  - "us-west-2b"
     DependsOn: WebLaunchConfiguration
+  NatGateway01:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId:
+        Fn::GetAtt:
+          - EIP01
+          - AllocationId
+      SubnetId:
+        Ref: PrivateNetwork001
+  EIP01:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+  NatGateway02:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId:
+        Fn::GetAtt:
+          - EIP02
+          - AllocationId
+      SubnetId:
+        Ref: PrivateNetwork002
+  EIP02:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+#  Route:
+#    Type: AWS::EC2::Route
+#    Properties:
+#      RouteTableId:
+#        Ref: RouteTable
+#      DestinationCidrBlock: 0.0.0.0/0
+#      NatGatewayId:
+#         Ref: NatGateway
   ## load balancer
   
   ## s3 role
@@ -102,15 +174,39 @@ Resources:
 #    Properties: 
 #      Roles:
 #        - UdacityS3ReadOnlyEC2
-  
-#          #!/bin/bash
-#          apt-get update -y
-#          apt-get install unzip awscli -y
-#          apt-get install apache2 -y
-#          systemctl start apache2.service
-#          cd /var/www/html
-#          aws s3 cp s3://udacity-demo-1/udacity.zip .
-#          unzip -o udacity.zip
+  WebSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties: 
+      GroupDescription: open 80 & 22
+      GroupName: WebSG
+      SecurityGroupEgress: 
+        - IpProtocol: icmp
+          FromPort: -1
+          ToPort: -1
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 53
+          ToPort: 53
+          CidrIp: 0.0.0.0/0
+      SecurityGroupIngress: 
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+      VpcId:
+        Ref: VPCTest001
 Outputs: 
   Region:
     Description: "region"
