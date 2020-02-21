@@ -11,10 +11,14 @@ Parameters:
     Description: ip range for scaling group
     Type: String
     Default: 10.0.0.0/16
-  SubnetIpBlocks:
-    Description: ip range for subnets
+  PublicSubnetIpBlocks:
+    Description: ip range for public subnets
     Type: List<String>
     Default: "10.0.0.0/24, 10.0.1.0/24"
+  PrivateSubnetIpBlocks:
+    Description: ip range for private subnets
+    Type: List<String>
+    Default: "10.0.128.0/24, 10.0.129.0/24"
   Zones:
     Description: zones
     Type: List<String>
@@ -22,11 +26,11 @@ Parameters:
   Maxsize:
     Description: max size of vms in auto scaling group
     Type: String
-    Default: 4
+    Default: 1
   MinSize:
     Description: min size of vms in auto scaling group
     Type: String
-    Default: 4
+    Default: 1
   ImageId:
     Description: image
     Type: String
@@ -34,7 +38,11 @@ Parameters:
   InstanceType:
     Description: image
     Type: String
-    Default: "t2.medium"
+    Default: "t2.micro"
+  KeyName:
+    Description: ec2 ssh key-pair name
+    Type: String
+    Default: udacity_project_cloudformation
   UserData: 
     Description: script to run the website
     Type: String
@@ -61,13 +69,31 @@ Resources:
       EnableDnsHostnames: true
       EnableDnsSupport: true
       InstanceTenancy: default
+  PublicNetwork001:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: VPC001
+      CidrBlock:
+        !Select [0, !Ref PublicSubnetIpBlocks]
+      AvailabilityZone:
+        !Select [0, !Ref Zones]
+  PublicNetwork002:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: VPC001
+      CidrBlock: 
+        !Select [1, !Ref PublicSubnetIpBlocks]
+      AvailabilityZone:
+        !Select [1, !Ref Zones]
   PrivateNetwork001:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId:
         Ref: VPC001
       CidrBlock:
-        !Select [0, !Ref SubnetIpBlocks]
+        !Select [0, !Ref PrivateSubnetIpBlocks]
       AvailabilityZone:
         !Select [0, !Ref Zones]
   PrivateNetwork002:
@@ -76,9 +102,15 @@ Resources:
       VpcId:
         Ref: VPC001
       CidrBlock: 
-        !Select [1, !Ref SubnetIpBlocks]
+        !Select [1, !Ref PrivateSubnetIpBlocks]
       AvailabilityZone:
         !Select [1, !Ref Zones]
+
+
+#########################################
+#  Internet gateway
+#########################################       
+
   InternetGateway:
     Type: AWS::EC2::InternetGateway
     Properties:
@@ -106,14 +138,78 @@ Resources:
   RouteTableAssociationAPublic:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      SubnetId: !Ref PrivateNetwork001
+      SubnetId: !Ref PublicNetwork001
       RouteTableId: !Ref PublicRouteTable
 
   RouteTableAssociationBPublic:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      SubnetId: !Ref PrivateNetwork002
+      SubnetId: !Ref PublicNetwork002
       RouteTableId: !Ref PublicRouteTable
+ 
+
+#########################################
+#  NAT
+#########################################       
+
+  NATEIP001:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  NatGateway001:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt 'NATEIP001.AllocationId'
+      SubnetId: !Ref PublicNetwork001
+
+  NATEIP002:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  NatGateway002:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt 'NATEIP002.AllocationId'
+      SubnetId: !Ref PublicNetwork002
+
+  NatRouteTable001:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC001
+
+  NatRouteTableEntry00101:
+    Type: AWS::EC2::Route
+    Properties:
+      NatGatewayId: !Ref NatGateway001
+      RouteTableId: !Ref NatRouteTable001
+      DestinationCidrBlock: '0.0.0.0/0'
+
+  NatRouteTable002:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC001
+
+  NatRouteTableEntry00201:
+    Type: AWS::EC2::Route
+    Properties:
+      NatGatewayId: !Ref NatGateway002
+      RouteTableId: !Ref NatRouteTable002
+      DestinationCidrBlock: '0.0.0.0/0'
+
+  RouteTableAssociationNat001:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateNetwork001
+      RouteTableId: !Ref NatRouteTable001
+
+  RouteTableAssociationNat002:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateNetwork002
+      RouteTableId: !Ref NatRouteTable002
+      
       
 #########################################
 #  security group
@@ -137,6 +233,10 @@ Resources:
           FromPort: 53
           ToPort: 53
           CidrIp: 0.0.0.0/0
+        - IpProtocol: icmp
+          FromPort: -1
+          ToPort: -1
+          CidrIp: 0.0.0.0/0
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 80
@@ -145,6 +245,10 @@ Resources:
         - IpProtocol: tcp
           FromPort: 22
           ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: icmp
+          FromPort: -1
+          ToPort: -1
           CidrIp: 0.0.0.0/0
       VpcId:
         Ref: VPC001
@@ -156,7 +260,6 @@ Resources:
   WebLaunchConfiguration:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties: 
-      #AssociatePublicIpAddress: true
       BlockDeviceMappings: 
         - DeviceName: /dev/sda1
           Ebs: 
@@ -166,7 +269,7 @@ Resources:
         !Ref ProfileWithRolesForOurApp
       ImageId: !Ref ImageId
       InstanceType: !Ref InstanceType
-      KeyName: "udacity_project_cloudformation"
+      KeyName: !Ref KeyName
       PlacementTenancy: "default"
       SecurityGroups: 
         - !Ref WebSG
@@ -202,6 +305,68 @@ Resources:
         - UdacityS3ReadOnlyEC2
 
 #########################################
+# bastion
+#########################################
+  BastionSecureGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VPC001
+      GroupDescription: Enable ssh access
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: icmp
+          FromPort: -1
+          ToPort: -1
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 53
+          ToPort: 53
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: icmp
+          FromPort: -1
+          ToPort: -1
+          CidrIp: 0.0.0.0/0
+  BastionEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+  BastionEIPAssociation:   
+    Type: AWS::EC2::EIPAssociation
+    Properties: 
+      #AllocationId: String
+      EIP: !Ref BastionEIP
+      InstanceId: !Ref BastionInstance
+      #NetworkInterfaceId: String
+      #PrivateIpAddress: String
+  BastionInstance: 
+    Type: AWS::EC2::Instance
+    Properties: 
+      ImageId: !Ref ImageId
+      KeyName: !Ref KeyName
+      InstanceType: !Ref InstanceType
+      SecurityGroupIds:
+        - !Ref BastionSecureGroup
+      SubnetId:
+        !Ref PublicNetwork001
+      
+      
+#########################################
 # load balancer
 #########################################
 
@@ -224,8 +389,8 @@ Resources:
       SecurityGroups:
         - !Ref ELBSecurityGroup
       Subnets:
-        - !Ref PrivateNetwork001
-        - !Ref PrivateNetwork002
+        - !Ref PublicNetwork001
+        - !Ref PublicNetwork002
       Type: application
   
   Listener:
