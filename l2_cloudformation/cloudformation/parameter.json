@@ -1,11 +1,11 @@
 [
   {
     "ParameterKey": "Maxsize",
-    "ParameterValue": "4"
+    "ParameterValue": "1"
   },
   {
     "ParameterKey": "MinSize",
-    "ParameterValue": "4"
+    "ParameterValue": "1"
   },
   {
     "ParameterKey": "KeyName",
@@ -17,6 +17,6 @@
   },
   {
     "ParameterKey": "InstanceType",
-    "ParameterValue": "t2.medium"
+    "ParameterValue": "t2.micro"
   }
 ]

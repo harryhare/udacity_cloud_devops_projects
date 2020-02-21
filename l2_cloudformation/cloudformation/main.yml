@@ -110,10 +110,7 @@ Resources:
 
   InternetGateway:
     Type: AWS::EC2::InternetGateway
-    Properties:
-      Tags:
-      - Key: Name
-        Value: test
+
         
   VPCGatewayAttachment:
     Type: AWS::EC2::VPCGatewayAttachment
@@ -250,7 +247,7 @@ Resources:
         !Ref ProfileWithRolesForOurApp
       ImageId: !Ref ImageId
       InstanceType: !Ref InstanceType
-      #KeyName: !Ref KeyName
+      KeyName: !Ref KeyName
       PlacementTenancy: "default"
       SecurityGroups: 
         - !Ref WebSG
@@ -305,27 +302,27 @@ Resources:
           FromPort: -1
           ToPort: -1
           CidrIp: 0.0.0.0/0
-      SecurityGroupEgress:
-        - IpProtocol: tcp
-          FromPort: 22
-          ToPort: 22
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 80
-          ToPort: 80
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 443
-          ToPort: 443
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 53
-          ToPort: 53
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: icmp
-          FromPort: -1
-          ToPort: -1
-          CidrIp: 0.0.0.0/0
+      # SecurityGroupEgress:
+        # - IpProtocol: tcp
+          # FromPort: 22
+          # ToPort: 22
+          # CidrIp: 0.0.0.0/0
+        # - IpProtocol: tcp
+          # FromPort: 80
+          # ToPort: 80
+          # CidrIp: 0.0.0.0/0
+        # - IpProtocol: tcp
+          # FromPort: 443
+          # ToPort: 443
+          # CidrIp: 0.0.0.0/0
+        # - IpProtocol: tcp
+          # FromPort: 53
+          # ToPort: 53
+          # CidrIp: 0.0.0.0/0
+        # - IpProtocol: icmp
+          # FromPort: -1
+          # ToPort: -1
+          # CidrIp: 0.0.0.0/0
           
   BastionEIP:
     Type: AWS::EC2::EIP
@@ -343,7 +340,7 @@ Resources:
     Properties: 
       ImageId: !Ref ImageId
       KeyName: !Ref KeyName
-      InstanceType: !Ref InstanceType
+      InstanceType: "t2.micro"
       SecurityGroupIds:
         - !Ref BastionSecureGroup
       SubnetId:
@@ -431,9 +428,26 @@ Outputs:
     Description: BastionIP
     Value:
       !Ref BastionEIP
-    Export:
-      Name: BastionIP  
       
+  BastionHostDNS:
+    Description: Bastion host public DNS
+    Value: !GetAtt BastionInstance.PublicDnsName
+    
+  BastionPublicIPAddress:
+    Description: Bastion host public IP
+    Value: !GetAtt BastionInstance.PublicIp
+    
+  NATIPs:
+    Description: BastionIP
+    Value:
+      Fn::Join:
+        - "\t\t"
+        -  
+          - !Ref NATEIP001
+          - !Ref NATEIP002
+    Export:
+      Name: NATIPs  
+   
   LBDNSName:
     Description: Web App ELB DNSName 
     Value:
