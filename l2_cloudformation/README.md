@@ -2,9 +2,14 @@
 
 This Project use cloudformation to deploy a demo website on aws.
 
-Demo url:
+Demo URL:
 
-`http://udaci-WebAp-ABIK3H3HCNU7-740757579.us-west-2.elb.amazonaws.com`
+[http://udaci-WebAp-ABIK3H3HCNU7-740757579.us-west-2.elb.amazonaws.com](http://udaci-WebAp-ABIK3H3HCNU7-740757579.us-west-2.elb.amazonaws.com)
+
+Github URL:
+
+[https://github.com/harryhare/udacity_cloud_ops_course/tree/master/l2_cloudformation](https://github.com/harryhare/udacity_cloud_ops_course/tree/master/l2_cloudformation)
+
 
 ### How To Run
 
