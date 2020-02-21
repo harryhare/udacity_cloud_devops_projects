@@ -1,20 +1,50 @@
-Parameters:
-# whatever you consider a changing value, put it as a parameter instead of hard-coding it into your script
-Resources:
-  #instace profile contains the IAM Role name(s) that we want to associate to our auto scaling EC2 Servers
-  ProfileWithRolesForOurApp:
-    Type: AWS::IAM::InstanceProfile
-    Properties: 
-      Roles:
-        - UdacityS3ReadOnlyEC2
-  
-          #!/bin/bash
-          apt-get update -y
-          apt-get install unzip awscli -y
-          apt-get install apache2 -y
-          systemctl start apache2.service
-          cd /var/www/html
-          aws s3 cp s3://udacity-demo-1/udacity.zip .
-          unzip -o udacity.zip
-  Outputs: 
-  #Bonus points for useful outputs!
+### Intro
+
+This Project use cloudformation to deploy a demo website on aws.
+
+Demo url:
+
+`http://udaci-WebAp-ABIK3H3HCNU7-740757579.us-west-2.elb.amazonaws.com`
+
+### How To Run
+
+#### preparetion
+
+* install the aws-cli
+
+* run `aws-config`, then input the key id and key secret
+
+
+#### linux / macOS
+
+* create the stack
+```
+create.sh
+```
+
+* update the stack
+```
+update.sh
+```
+
+* delete the stack
+```
+delete.sh
+```
+
+#### Windows
+
+* create the stack
+```
+create.bat
+```
+
+* update the stack
+```
+update.bat
+```
+
+* delete the stack
+```
+delete.bat
+```
