@@ -3,38 +3,47 @@ Description: >
   by mayue
   
 Parameters:
+
   VPCCidr:
     Description: ip range for scaling group
     Type: String
     Default: 10.0.0.0/16
+    
   PublicSubnetIpBlocks:
     Description: ip range for public subnets
     Type: List<String>
     Default: "10.0.0.0/24, 10.0.1.0/24"
+    
   PrivateSubnetIpBlocks:
     Description: ip range for private subnets
     Type: List<String>
     Default: "10.0.128.0/24, 10.0.129.0/24"
+    
   Zones:
     Description: zones
     Type: List<String>
     Default: "us-west-2a, us-west-2b"
+    
   Maxsize:
     Description: max size of vms in auto scaling group
     Type: String
     Default: 1
+    
   MinSize:
     Description: min size of vms in auto scaling group
     Type: String
     Default: 1
+    
   ImageId:
     Description: image
     Type: String
     Default: "ami-0d1cd67c26f5fca19"
+    
   InstanceType:
     Description: image
     Type: String
     Default: "t2.micro"
+    
   KeyName:
     Description: ec2 ssh key-pair name
     Type: String
@@ -53,6 +62,7 @@ Resources:
       EnableDnsHostnames: true
       EnableDnsSupport: true
       InstanceTenancy: default
+      
   PublicNetwork001:
     Type: AWS::EC2::Subnet
     Properties:
@@ -62,6 +72,7 @@ Resources:
         !Select [0, !Ref PublicSubnetIpBlocks]
       AvailabilityZone:
         !Select [0, !Ref Zones]
+        
   PublicNetwork002:
     Type: AWS::EC2::Subnet
     Properties:
@@ -71,6 +82,7 @@ Resources:
         !Select [1, !Ref PublicSubnetIpBlocks]
       AvailabilityZone:
         !Select [1, !Ref Zones]
+        
   PrivateNetwork001:
     Type: AWS::EC2::Subnet
     Properties:
@@ -80,6 +92,7 @@ Resources:
         !Select [0, !Ref PrivateSubnetIpBlocks]
       AvailabilityZone:
         !Select [0, !Ref Zones]
+        
   PrivateNetwork002:
     Type: AWS::EC2::Subnet
     Properties:
@@ -101,6 +114,7 @@ Resources:
       Tags:
       - Key: Name
         Value: test
+        
   VPCGatewayAttachment:
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
@@ -251,6 +265,7 @@ Resources:
             cd /var/www/html
             aws s3 cp s3://udacity-demo-1/udacity.zip .
             unzip -o udacity.zip
+
   Web1:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties: 
@@ -271,9 +286,11 @@ Resources:
       Roles:
         - UdacityS3ReadOnlyEC2
 
+
 #########################################
 # bastion
 #########################################
+
   BastionSecureGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -309,15 +326,18 @@ Resources:
           FromPort: -1
           ToPort: -1
           CidrIp: 0.0.0.0/0
+          
   BastionEIP:
     Type: AWS::EC2::EIP
     Properties:
       Domain: vpc
+      
   BastionEIPAssociation:   
     Type: AWS::EC2::EIPAssociation
     Properties: 
       EIP: !Ref BastionEIP
       InstanceId: !Ref BastionInstance
+      
   BastionInstance: 
     Type: AWS::EC2::Instance
     Properties: 
