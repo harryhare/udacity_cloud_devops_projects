@@ -10,7 +10,7 @@
 	- [x] load balancer
 	- [x] login/test
 [x] the output
-[ ] write the project document
+[x] write the project document
 
 
 [x] bastion
