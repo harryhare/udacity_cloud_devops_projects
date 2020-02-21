@@ -3,10 +3,6 @@ Description: >
   by mayue
   
 Parameters:
-  ProjectName:
-    Description: project name
-    Type: String
-    Default: udacity cloud ops project 02
   VPCCidr:
     Description: ip range for scaling group
     Type: String
@@ -43,18 +39,6 @@ Parameters:
     Description: ec2 ssh key-pair name
     Type: String
     Default: udacity_project_cloudformation
-  UserData: 
-    Description: script to run the website
-    Type: String
-    Default: 
-      #!/bin/bash
-      apt-get update -y
-      apt-get install unzip awscli -y
-      apt-get install apache2 -y
-      systemctl start apache2.service
-      cd /var/www/html
-      aws s3 cp s3://udacity-demo-1/udacity.zip .
-      unzip -o udacity.zip
       
 Resources:
 
@@ -220,23 +204,6 @@ Resources:
     Properties: 
       GroupDescription: open 80 & 22
       GroupName: WebSG
-      SecurityGroupEgress: 
-        - IpProtocol: tcp
-          FromPort: 80
-          ToPort: 80
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 443
-          ToPort: 443
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 53
-          ToPort: 53
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: icmp
-          FromPort: -1
-          ToPort: -1
-          CidrIp: 0.0.0.0/0
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 80
@@ -269,7 +236,7 @@ Resources:
         !Ref ProfileWithRolesForOurApp
       ImageId: !Ref ImageId
       InstanceType: !Ref InstanceType
-      KeyName: !Ref KeyName
+      #KeyName: !Ref KeyName
       PlacementTenancy: "default"
       SecurityGroups: 
         - !Ref WebSG
@@ -349,11 +316,8 @@ Resources:
   BastionEIPAssociation:   
     Type: AWS::EC2::EIPAssociation
     Properties: 
-      #AllocationId: String
       EIP: !Ref BastionEIP
       InstanceId: !Ref BastionInstance
-      #NetworkInterfaceId: String
-      #PrivateIpAddress: String
   BastionInstance: 
     Type: AWS::EC2::Instance
     Properties: 
@@ -441,7 +405,14 @@ Outputs:
             Ref: "AWS::Region"
     Export:
       Name: AvailabilityZones
-      
+     
+
+  BastionIP:
+    Description: BastionIP
+    Value:
+      !Ref BastionEIP
+    Export:
+      Name: BastionIP  
       
   LBDNSName:
     Description: Web App ELB DNSName 

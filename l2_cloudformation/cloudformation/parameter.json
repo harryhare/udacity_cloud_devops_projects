@@ -1,6 +1,22 @@
 [
   {
-    "ParameterKey": "ProjectName",
-    "ParameterValue": "udacity cloud ops project 02"
+    "ParameterKey": "Maxsize",
+    "ParameterValue": "4"
+  },
+  {
+    "ParameterKey": "MinSize",
+    "ParameterValue": "4"
+  },
+  {
+    "ParameterKey": "KeyName",
+    "ParameterValue": "udacity_project_cloudformation"
+  },
+  {
+    "ParameterKey": "ImageId",
+    "ParameterValue": "ami-0d1cd67c26f5fca19"
+  },
+  {
+    "ParameterKey": "InstanceType",
+    "ParameterValue": "t2.medium"
   }
 ]
