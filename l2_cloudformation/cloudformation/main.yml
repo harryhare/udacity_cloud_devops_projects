@@ -46,7 +46,7 @@ Parameters:
     
   KeyName:
     Description: ec2 ssh key-pair name
-    Type: String
+    Type:  AWS::EC2::KeyPair::KeyName
     Default: udacity_project_cloudformation
       
 Resources:
