@@ -5,6 +5,20 @@
 - https://www.lucidchart.com/ (通用的流程图工具，有两套aws 的 shapes 可选)
 
 
+### 参考资料
+
+https://www.agilepartner.net/en/aws-cloudformation-part-1/
+
+https://www.agilepartner.net/en/aws-cloudformation-part-2/
+
+https://www.agilepartner.net/en/aws-cloudformation-part-3/
+
+https://www.agilepartner.net/en/aws-cloudformation-part-4/
+
+https://www.agilepartner.net/en/aws-cloudformation-part-5/
+
+https://www.agilepartner.net/en/aws-cloudformation-part-6/
+
 ### cloudforamtion
 
 #### cloudforamtion 常见的问题
@@ -46,7 +60,9 @@
 
 - public subnet 和 private subnet 的区别是 前者拥有internet gateway
 
-- nat gateway 和 internet gateway 本身都 要创建在 public subnet中
+- nat gateway  要创建在 public subnet中
+
+- internet gateway 直接和 vpc 关联，不属于public subnet 的一部分
 
 - nat gateway 可以不同子网公用一个，不过建议是一个子网一个
 
@@ -85,7 +101,7 @@
 	ssh-add -l
 	ssh -A ubuntu@54.218.160.213
 	```
-- aws 文档中有说 `ssh-add -c test.pem` 但是，我尝试时报错
+- [aws 文档](https://docs.aws.amazon.com/zh_cn/vpc/latest/userguide/vpc-nat-gateway.html)中有说 `ssh-add -c test.pem` 但是，我尝试时报错
   `The user must confirm each use of the key`
  
 - 如果 报错 `Could not open a connection to your authentication agent.`
