@@ -6,6 +6,8 @@
 
 https://blog.csdn.net/qq_17639365/article/details/86655177
 
+### 课程repo地址
+https://github.com/udacity/DevOps_Microservices
 
 ### kubenetes 
 

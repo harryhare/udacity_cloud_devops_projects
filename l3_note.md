@@ -42,6 +42,7 @@ server{
 
 ## lesson 3
 
+
 project 位置，k45vd-ubuntu:~/git/ansible_playground/nginx_ansible
 
 * ansible
