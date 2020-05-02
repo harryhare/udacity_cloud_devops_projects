@@ -1,0 +1,8 @@
+### repo
+
+https://github.com/harryhare/capstone
+
+
+### the app
+
+http://ad121dfab8d394466b39406df083cb92-164927730.us-west-2.elb.amazonaws.com/

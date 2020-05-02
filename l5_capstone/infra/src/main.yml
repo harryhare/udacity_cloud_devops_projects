@@ -1,0 +1,415 @@
+Description: >
+  udacity cloud ops project
+  by mayue
+  
+Parameters:
+
+  VPCCidr:
+    Description: ip range for scaling group
+    Type: String
+    Default: 10.0.0.0/16
+    
+  PublicSubnetIpBlocks:
+    Description: ip range for public subnets
+    Type: List<String>
+    Default: "10.0.0.0/24, 10.0.1.0/24"
+    
+  PrivateSubnetIpBlocks:
+    Description: ip range for private subnets
+    Type: List<String>
+    Default: "10.0.128.0/24, 10.0.129.0/24"
+    
+  Zones:
+    Description: zones
+    Type: List<String>
+    Default: "us-west-2a, us-west-2b"
+    
+  Maxsize:
+    Description: max size of vms in auto scaling group
+    Type: String
+    Default: 1
+    
+  MinSize:
+    Description: min size of vms in auto scaling group
+    Type: String
+    Default: 1
+    
+  ImageId:
+    Description: image
+    Type: String
+    Default: "ami-0d1cd67c26f5fca19"
+    
+  InstanceType:
+    Description: image
+    Type: String
+    Default: "t2.micro"
+    
+  KeyName:
+    Description: ec2 ssh key-pair name
+    Type:  AWS::EC2::KeyPair::KeyName
+    Default: capstone
+      
+Resources:
+
+#########################################
+#  vpc
+#########################################
+
+  VPC001:
+    Type: AWS::EC2::VPC
+    Properties: 
+      CidrBlock: !Ref VPCCidr
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      InstanceTenancy: default
+      
+  PublicNetwork001:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: VPC001
+      CidrBlock:
+        !Select [0, !Ref PublicSubnetIpBlocks]
+      AvailabilityZone:
+        !Select [0, !Ref Zones]
+        
+  PublicNetwork002:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: VPC001
+      CidrBlock: 
+        !Select [1, !Ref PublicSubnetIpBlocks]
+      AvailabilityZone:
+        !Select [1, !Ref Zones]
+        
+  PrivateNetwork001:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: VPC001
+      CidrBlock:
+        !Select [0, !Ref PrivateSubnetIpBlocks]
+      AvailabilityZone:
+        !Select [0, !Ref Zones]
+        
+  PrivateNetwork002:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: VPC001
+      CidrBlock: 
+        !Select [1, !Ref PrivateSubnetIpBlocks]
+      AvailabilityZone:
+        !Select [1, !Ref Zones]
+
+
+#########################################
+#  Internet gateway
+#########################################       
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+
+        
+  VPCGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC001
+      InternetGatewayId: !Ref InternetGateway
+      
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC001
+
+  PublicInternetRouteTableEntry:
+    Type: AWS::EC2::Route
+    Properties:
+      GatewayId: !Ref InternetGateway
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: '0.0.0.0/0'
+
+  RouteTableAssociationAPublic:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicNetwork001
+      RouteTableId: !Ref PublicRouteTable
+
+  RouteTableAssociationBPublic:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicNetwork002
+      RouteTableId: !Ref PublicRouteTable
+ 
+
+#########################################
+#  NAT
+#########################################       
+
+  NATEIP001:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  NatGateway001:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt 'NATEIP001.AllocationId'
+      SubnetId: !Ref PublicNetwork001
+
+  NATEIP002:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  NatGateway002:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt 'NATEIP002.AllocationId'
+      SubnetId: !Ref PublicNetwork002
+
+  NatRouteTable001:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC001
+
+  NatRouteTableEntry00101:
+    Type: AWS::EC2::Route
+    Properties:
+      NatGatewayId: !Ref NatGateway001
+      RouteTableId: !Ref NatRouteTable001
+      DestinationCidrBlock: '0.0.0.0/0'
+
+  NatRouteTable002:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC001
+
+  NatRouteTableEntry00201:
+    Type: AWS::EC2::Route
+    Properties:
+      NatGatewayId: !Ref NatGateway002
+      RouteTableId: !Ref NatRouteTable002
+      DestinationCidrBlock: '0.0.0.0/0'
+
+  RouteTableAssociationNat001:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateNetwork001
+      RouteTableId: !Ref NatRouteTable001
+
+  RouteTableAssociationNat002:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateNetwork002
+      RouteTableId: !Ref NatRouteTable002
+      
+      
+#########################################
+#  security group
+#########################################
+
+  WebSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties: 
+      GroupDescription: open 80 & 22
+      GroupName: WebSG
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: !Ref VPCCidr
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref VPCCidr
+        - IpProtocol: icmp
+          FromPort: -1
+          ToPort: -1
+          CidrIp: !Ref VPCCidr
+      VpcId:
+        Ref: VPC001
+        
+#########################################
+# EKS
+#########################################
+  EKSClusterRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - eks.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonEKSClusterPolicy
+        
+  AppCluster:
+    Type: AWS::EKS::Cluster
+    Properties: 
+      Name: app-cluster1
+      ResourcesVpcConfig:
+        SecurityGroupIds:
+          - !Ref WebSG
+        SubnetIds:
+          - !Ref PublicNetwork001
+          - !Ref PublicNetwork002
+          - !Ref PrivateNetwork001
+          - !Ref PrivateNetwork002
+      RoleArn: !GetAtt EKSClusterRole.Arn
+      Version: 1.15
+      
+  NodeInstanceRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      ManagedPolicyArns:
+        - !Sub "arn:${AWS::Partition}:iam::aws:policy/AmazonEKSWorkerNodePolicy"
+        - !Sub "arn:${AWS::Partition}:iam::aws:policy/AmazonEKS_CNI_Policy"
+        - !Sub "arn:${AWS::Partition}:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+      Path: /
+      
+  EKSNodegroup:
+    Type: AWS::EKS::Nodegroup
+    DependsOn: AppCluster
+    Properties:
+      ClusterName: app-cluster1
+      NodegroupName: app-node-group
+      NodeRole: !GetAtt NodeInstanceRole.Arn
+      InstanceTypes:
+        - t3.medium
+      RemoteAccess: 
+        Ec2SshKey: !Ref KeyName
+        SourceSecurityGroups:
+          - !Ref WebSG
+          - !Ref JekinsSecureGroup
+      ScalingConfig:
+        MinSize: 1
+        DesiredSize: 1
+        MaxSize: 1
+      Labels:
+        type: app
+      Subnets:
+        - !Ref PrivateNetwork001
+        - !Ref PrivateNetwork002
+
+
+#########################################
+# EC2-Jekins
+#########################################
+
+  JekinsSecureGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VPC001
+      GroupDescription: Enable ssh access
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: icmp
+          FromPort: -1
+          ToPort: -1
+          CidrIp: 0.0.0.0/0
+          
+  JekinsEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      
+  JekinsEIPAssociation:   
+    Type: AWS::EC2::EIPAssociation
+    Properties: 
+      EIP: !Ref JekinsEIP
+      InstanceId: !Ref JekinsInstance
+      
+  JekinsInstance: 
+    Type: AWS::EC2::Instance
+    Properties: 
+      ImageId: !Ref ImageId
+      KeyName: !Ref KeyName
+      InstanceType: "t2.micro"
+      SecurityGroupIds:
+        - !Ref JekinsSecureGroup
+      SubnetId:
+        !Ref PublicNetwork001
+      
+      
+      
+      
+#########################################
+# outputs
+#########################################
+ 
+Outputs: 
+
+  Region:
+    Description: "region"
+    Value:
+      Ref: "AWS::Region"
+    Export:
+      Name: !Sub '${AWS::StackName}-region'
+      
+  AvailabilityZones:
+    Description: AvailabilityZones
+    Value:
+      !Join 
+        - ","
+        - Fn::GetAZs: 
+            Ref: "AWS::Region"
+    Export:
+      Name: !Sub '${AWS::StackName}-AvailabilityZones'
+     
+
+  JekinsEIP:
+    Description: JekinsEIP
+    Value:
+      !Ref JekinsEIP
+    Export:
+      Name: !Sub '${AWS::StackName}-JekinsEIP'
+      
+#  JekinsHostDNS:
+#    Description: Jekins host public DNS
+#    Value: !GetAtt JekinsInstance.PublicDnsName
+    
+#  JekinsPublicIPAddress:
+#    Description: Jekins host public IP
+#    Value: !GetAtt JekinsInstance.PublicIp
+    
+#  NATIPs:
+#    Description: NATIPs
+#    Value:
+#      Fn::Join:
+#        - "\t\t"
+#        -  
+#          - !Ref NATEIP001
+#          - !Ref NATEIP002
+#    Export:
+#      Name: NATIPs  
+   
+#  LBDNSName:
+#    Description: Web App ELB DNSName 
+#    Value:
+#      Fn::Join:
+#        - ""
+#        - - "http://"
+#          - Fn::GetAtt: WebAppALB.DNSName  
+  

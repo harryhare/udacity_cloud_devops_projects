@@ -1,0 +1,22 @@
+[
+  {
+    "ParameterKey": "Maxsize",
+    "ParameterValue": "1"
+  },
+  {
+    "ParameterKey": "MinSize",
+    "ParameterValue": "1"
+  },
+  {
+    "ParameterKey": "KeyName",
+    "ParameterValue": "capstone"
+  },
+  {
+    "ParameterKey": "ImageId",
+    "ParameterValue": "ami-0d1cd67c26f5fca19"
+  },
+  {
+    "ParameterKey": "InstanceType",
+    "ParameterValue": "t2.micro"
+  }
+]

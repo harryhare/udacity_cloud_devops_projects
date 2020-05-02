@@ -1,0 +1,56 @@
+def createVersion() {
+    return new Date().format('yyyyMMddHHmmss') + "_${env.BUILD_ID}"
+}
+
+
+pipeline {
+	agent any
+	environment {
+		version = createVersion()
+    }
+	stages {
+		stage("Lint"){
+			steps {
+				sh '''
+					cd project/
+					make lint
+				'''
+			}
+		}
+		stage("build"){
+			steps {
+				echo "commit: ${env.GIT_COMMIT}"
+				echo "${version}"
+				sh '''
+					echo ${version}
+					cd project/
+					docker build -t app .
+					docker tag app harryhare/testapp:latest
+					docker tag app harryhare/testapp:${version}
+					docker push harryhare/testapp:latest
+					docker push harryhare/testapp:${version}
+				'''
+			}
+		}
+		stage('Security Scan') {
+			steps { 
+				aquaMicroscanner imageName: 'app', notCompliesCmd: 'exit 1', onDisallowed: 'fail', outputFormat: 'html'
+			}
+		}
+		stage("deploy"){
+			steps {
+				sh '''
+					cd kubernetes
+					export PATH=$PATH:/var/lib/jenkins/.local/bin
+					#kubectl apply -f deploy.yml
+					#kubectl apply -f service.yml
+					kubectl set image deployment.v1.apps/app app=harryhare/testapp:${version}
+					kubectl rollout status deployment.v1.apps/app
+					kubectl rollout history deployment app
+					kubectl get deployments
+					kubectl get svc
+				'''
+			}
+		}
+	}
+}
