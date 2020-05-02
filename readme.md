@@ -1,6 +1,6 @@
-##  udacity cloud devops course notes & projects
+##  Udacity cloud devops course notes & projects
 
-* for Nanodegree Program
+* For Udacity Nanodegree Program
   [Cloud DevOps Engineer](https://classroom.udacity.com/nanodegrees/nd9991-cn/dashboard/overview)
 
 ### notes
