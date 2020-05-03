@@ -5,7 +5,7 @@
 - group 包括 一组 policy 
 - user 可以加入到 group 中
 - role 也可以包括 一组 policy
-- role 注意是attach 到 aws 和 lambda 的, 不过也可以和user 绑定
+- role 注意是attach 到 aws 资源 和 lambda 的, 不过也可以和user 绑定
 - user 可以直接attach policy
 - policy 可以 自定义，policy 包括最资源和读写的详细定义
 

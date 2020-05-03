@@ -54,7 +54,7 @@ aqua
 		wget https://get.aquasec.com/microscanner .
 		chmod +x wget
 		 docker run -it --rm -v /home/ubuntu:/mnt/ nginx /bin/bash
-		./microscanner  xxx  --no-verify
+		./microscanner  xxx  --no-verify # 不加html 默认输出是 json
 		./microscanner  xxx  --html --no-verify
 		```
 
