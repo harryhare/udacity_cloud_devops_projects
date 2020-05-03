@@ -1,22 +1,35 @@
 def createVersion() {
     return new Date().format('yyyyMMddHHmmss') + "_${env.BUILD_ID}"
 }
-
-
 pipeline {
 	agent any
 	environment {
 		version = createVersion()
     }
 	stages {
-		stage("Lint"){
-			steps {
+		stage('Lint') {
+		  parallel {
+			stage('html') {
+			  steps {
 				sh '''
 					cd project/
-					make lint
+					tidy -q -e src/*.html
 				'''
+			  }
 			}
+
+			stage('dockerfile') {
+			  steps {
+				sh '''
+					cd project/
+					hadolint Dockerfile
+				'''
+			  }
+			}
+
+		  }
 		}
+
 		stage("build"){
 			steps {
 				echo "commit: ${env.GIT_COMMIT}"
@@ -52,5 +65,7 @@ pipeline {
 				'''
 			}
 		}
+
 	}
+
 }
