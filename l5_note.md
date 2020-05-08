@@ -149,5 +149,10 @@ aqua
 			```
 			kubectl create clusterrolebinding ops-user-cluster-admin-binding --clusterrole=cluster-admin --user=ops-user
 			```
-
+* 坑
+	- 如果 service 使用了 loadbalancer，
+	- delete stack 时 elb 的 network interface detach 不掉
+	- 会提示没有权限，但是其实不是权限问题，而是 loadbalancer 的 elb 没有删掉
+	- 把elb 手动删掉后， eni（elastic network interface）会自动消失
+	- 然后就可以继续删除 stack了
 
