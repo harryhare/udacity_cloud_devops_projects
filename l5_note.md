@@ -20,11 +20,47 @@
   - 通过 blue ocean -> new pipeline
   - 会提示输入 personal access tokens，此时如果随便创建一个填进去会报错说一定要有`repo`和`user:email` 两个权限才行
 
-* jenkinsfile
+* jenkins 文档
+  - https://www.jenkins.io/doc/pipeline/tour/getting-started
+  -  中文 https://www.jenkins.io/zh/doc
+  - 未看的(2020.5.8,此时尚有一些文档内容是空的)
+    - 用户手册 -> pipeline -> Extending with Shared Libraries 共享库
+* jenkins 的repo 可以使用本地文件夹： `/home/cloned-git-repos/my-git-repo.git`
+* jenkins pipeline `Jenkinsfile` 文件有两种格式
+    - https://www.jenkins.io/zh/doc/book/pipeline/syntax
+	- 声明式(Declarative), 最外是 pipeline
+      - reference: https://www.jenkins.io/zh/doc/pipeline/steps
+		```
+		pipeline {
+			agent { docker 'maven:3.3.3' }
+			stages {
+				stage('build') {
+					steps {
+						sh 'mvn --version'
+					}
+				}
+			}
+		}
+		```
+	- 命令式（script），最外是scripte，groovy语法
+	  - reference: https://www.jenkins.io/doc/pipeline/examples/
+		```
+		node {  
+			stage('Build') { 
+				sh 'mvn --version'
+			}
+			stage('Example') {
+				if (env.BRANCH_NAME == 'master') {
+					echo 'I only execute on the master branch'
+				} else {
+					echo 'I execute elsewhere'
+				}
+			}
+		}
+		```
+	
 
-  https://www.jenkins.io/doc/pipeline/tour/getting-started
-
-### docker 的安全扫描
+### docker 的安全扫描1
 
 aqua
 - 使用
