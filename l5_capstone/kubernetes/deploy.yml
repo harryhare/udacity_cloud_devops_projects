@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
         - name: app
-          image: harryhare/testapp:latest
+          image: harryhare/testapp:test
           ports:
             - containerPort: 80
             
